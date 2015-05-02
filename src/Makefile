@@ -1,6 +1,8 @@
 PROGRAM  = capmeter
 CROSS    = arm-none-eabi-
+COMPORT  = /dev/ttyUSB0
 OBJS     = main.o \
+           acmp.o \
            uart.o \
            startup.o \
 
@@ -45,12 +47,15 @@ $(PROGRAM).elf: $(LDSCRIPT) $(OBJS)
 	$(OBJCOPY) -S -O binary $< $@
 
 
-.PHONY: clean size
+.PHONY: clean size flash
 
 size: $(PROGRAM).elf
 	@echo ""
 	@$(SIZE) $(PROGRAM).elf
 	@echo ""
+
+flash: $(PROGRAM).hex $(COMPORT)
+	lpc21isp -verify $(PROGRAM).hex $(COMPORT) 9600 30000000
 
 clean:
 	rm -f $(OBJS) $(PROGRAM).elf $(PROGRAM).hex $(PROGRAM).bin $(PROGRAM).map

@@ -29,4 +29,7 @@ SECTIONS {
     _ebss = .;
   } > RAM
 
+  .ARM.exidx (NOLOAD) : {
+    /* No idea why this prevents building */
+  }
 }

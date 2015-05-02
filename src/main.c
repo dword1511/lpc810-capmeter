@@ -2,24 +2,36 @@
 #include <stdbool.h>
 #include <lpc8xx.h>
 
-#include "gpio.h"
+#include "acmp.h"
 #include "uart.h"
 
 #define _BV(x)       (1 << x)
+#define UNLIKELY(e)  (__builtin_expect(!!(e), false))
 
 #define GPIO_ACMP_I1 0
 #define GPIO_ACMP_I2 1
 #define GPIO_R220    2
 #define GPIO_R1M     3
 
+#define ACMPIN_REF   ACMPIN_I1
+#define ACMPIN_CAP   ACMPIN_I2
+
 #define INTERVAL_MS  200
-#define SAMPLES_MAX  50
+#define BAUDRATE     115200
+
+#define CYCLE_PER_US (__SYSTEM_CLOCK/1000000)
+#define CYCLE_PER_MS (__SYSTEM_CLOCK/1000)
+#define GPIO_FLOAT   (~(3 << 3))
+
+// 200ms / 1M = 200nF
+// 200nF * 220R = 44us
+// 200ms / 44us = 4546 measurements (magic! stupid me)
+#define RES_FRATIO   (1000000/220 + 1)
+#define SAMPLES_MAX  RES_FRATIO
 
 /*
- * NOTE: every clock is 33ns.
- * 1us systick seems to be reasonable.
- * anything smaller is a heavy burden.
- * For 1pF resolution, need 1Mohm resistor.
+ * NOTE: every clock is 33ns. Voltage input hooked up to ACMP_I2.
+ * For 1pF resolution, need 1Mohm resistor and 1us resolution.
  * 1us timer with uint32_t warps every 1.2 hours.
  * Systick reg warps every 24ms.
  * uint32_t cannot cover 5pF all the way up to 4700uF.
@@ -27,65 +39,47 @@
  *
  * Summary:
  * SysTick INT: count ms for delay functions. needs highest priority.
- * ACMP INT: record measurement and resets the circuit. needs low priority since may depend on delay.
- * Main Loop: call report every INTERVAL_MS ms.
+ * ACMP INT:  needs low priority since may depend on delay.
+ * Main Loop: record measurement and resets the circuit.
+ *            check timestamp and call report every INTERVAL_MS ms.
  */
 
-volatile struct {
-  bool     updating;
-  bool     fast;
-  uint64_t total;
-  unsigned samples;
-} data = {
-  .updating = false, // TODO: change to sending
-  .fast     = false,
-  .total    = 0UL,
-  .samples  = 0,
-};
+/*
+ * NOTE: system performance:
+ * 18-20pF minimum (due to distributed capacitance, can be calibrated)
+ * <del>~9000uF maximum</del>
+ * 5Hz data output
+ * Sensitive to resistance
+ * Fast channel is off (47 -> 57)?
+ * Maybe not, L(1.03uF) = 1.01uF
+ * 1pf takes 1us. switches to fast mode at 200nF. minimum measurement in fastmode takes 44us.
+ */
+
+// TODO: Recv cmd from uart
+// H = hold (just new line)
+// Z = set distributed capacitors
 
 volatile static uint32_t systime_ms = 0;
 
 void SysTick_Handler(void) {
+  // Keep it as short as possible, to reduce error.
   systime_ms ++;
 }
 
-#define CYCLE_PER_US (__SYSTEM_CLOCK/1000000)
-uint32_t capmeter_timer_get_us(void) {
+inline uint32_t capmeter_timer_get_us(void) {
   return systime_ms * 1000 + 1000 - (SysTick->VAL / CYCLE_PER_US);
 }
 
-#define CYCLE_PER_MS (__SYSTEM_CLOCK/1000)
 void capmeter_timer_init(void) {
   // SysTick Millisecond Timer
   while ((SysTick_Config(CYCLE_PER_MS)) != 0); // 1ms interval
-  NVIC_SetPriority(SysTick_IRQn, 0); // highest priority
+  NVIC_SetPriority(SysTick_IRQn, 0);           // highest priority
 }
 
 void capmeter_delay(uint32_t ms) {
   ms += systime_ms;
   while(systime_ms < ms);
 }
-
-#if 0
-void capmeter_timer_handler(void) {
-  if (data.updating) {
-    return;
-  }
-
-  if (data.samples == 0) {
-    if (!data.fast) {
-      data.fast = true;
-    }
-    return;
-  }
-
-  if ((data.samples >= SAMPLES_MAX) && data.fast) {
-    data.fast = false;
-  }
-
-  // TODO: call send data and reset data
-}
-#endif
 
 void capmeter_swm_init(void) {
   // Enable SWM
@@ -97,35 +91,62 @@ void capmeter_swm_init(void) {
   // Enable ACMP
   LPC_SWM->PINENABLE0 = 0xfffffffcUL;
 
-  // ACMP PIN IN TODO: why discharge reference?!
+  // ACMP PINs IN, All PINs FLOAT
   LPC_GPIO_PORT->CLR0 = (_BV(GPIO_ACMP_I1) | _BV(GPIO_ACMP_I2) | _BV(GPIO_R220) | _BV(GPIO_R1M));
-  LPC_GPIO_PORT->DIR0 = (_BV(GPIO_ACMP_I1) | _BV(GPIO_ACMP_I2));
+  LPC_IOCON->PIO0_2  &= GPIO_FLOAT;
+  LPC_IOCON->PIO0_3  &= GPIO_FLOAT;
+  LPC_GPIO_PORT->DIR0 = (_BV(GPIO_R220) | _BV(GPIO_R1M));
 }
 
 void capmeter_discharge(void) {
-  // Enable GPIO on comparator PINs
-  LPC_SWM->PINENABLE0 = 0xffffffffUL;
+  // Setup comparator for monitoring the discharge.
+  // 220R * 4700uF > 1s
+  // You can get another sample while discharging, but currently we do not do this,
+  // especially where LPC810's sink only provides 4mA before rising to 0.4V...
+  acmp_set_input(ACMPIN_CAP, ACMPIN_GND); // If this does not work, we will have to use the voltage ladder
 
-  // All PIN LOW & OUT
-  LPC_GPIO_PORT->CLR0 = (_BV(GPIO_ACMP_I1) | _BV(GPIO_ACMP_I2) | _BV(GPIO_R220) | _BV(GPIO_R1M));
-  LPC_GPIO_PORT->DIR0 = (_BV(GPIO_ACMP_I1) | _BV(GPIO_ACMP_I2) | _BV(GPIO_R220) | _BV(GPIO_R1M));
+  // All PIN LOW
+  LPC_GPIO_PORT->DIR0 = (_BV(GPIO_R220) | _BV(GPIO_R1M));
+  LPC_GPIO_PORT->CLR0 = (_BV(GPIO_R220) | _BV(GPIO_R1M));
 
-  // ACMP PIN IN
-  LPC_GPIO_PORT->DIR0 = (_BV(GPIO_ACMP_I1) | _BV(GPIO_ACMP_I2));
-
-  // Enable ACMP
-  LPC_SWM->PINENABLE0 = 0xfffffffcUL;
+  while (ACMP_OUT);
 }
 
-void capmeter_charge(bool fast) {
-  // GPIO High
+// TODO: faster switch to large capacitors
+uint64_t capmeter_charge(bool fast) {
+  uint64_t us_start, us_stop;
+  uint32_t last_ms = systime_ms;
+
+  // setup comparator
+  acmp_set_input(ACMPIN_REF, ACMPIN_CAP);
+
+  // GPIO High (to be specific, hold low, configure direction, then pull the correct pin high)
+  LPC_GPIO_PORT->DIR0 = fast ? _BV(GPIO_R220) : _BV(GPIO_R1M);
+  LPC_GPIO_PORT->SET0 = (_BV(GPIO_R220) | _BV(GPIO_R1M));
+
   // Take time snapshot
+  us_start = capmeter_timer_get_us();
+
+  // wait comparator. use identical operations to minimize error.
+  while (ACMP_OUT) {
+    if (UNLIKELY(!fast && ((systime_ms - last_ms) > INTERVAL_MS))) {
+      return 0;
+    }
+  }
+  us_stop = capmeter_timer_get_us();
+
+  // Calculate diff, convert to pF (*4546UL in fast)
+  // TODO: what will happen when time warps? 0xffffffffffffffffUL 
+  if (fast) {
+    return (us_stop - us_start) * RES_FRATIO;
+  } else {
+    return (us_stop - us_start);
+  }
 }
 
-// TODO: split int uf and pf to avoid long div
-void capmeter_send_data(uint64_t pf) {
-  // Format: XXXX.XX {u|n|p}F\r
-  char *msg = "   0.00 pF\r";
+// TODO: pass calibration, output '-' sign & 0 if <0
+void capmeter_send_data(uint64_t pf, bool fast) {
+  char msg[13];
   char unit = 'p';
   uint32_t remainder = 0;
   bool leading = true;
@@ -172,23 +193,50 @@ void capmeter_send_data(uint64_t pf) {
   remainder %= 100UL;
   msg[6] = (remainder / 10UL) + 0x30;
 
+  msg[7] = ' ';
   msg[8] = unit;
+  msg[9] = 'F';
 
-  uart0Send(msg, sizeof(msg));
+  msg[10] = ' ';
+  if (fast) {
+    msg[11] = 'L';
+  } else {
+    msg[11] = ' ';
+  }
+
+  msg[12] = '\r';
+  uart0Send(msg, 13);
 }
 
 int main(void) {
   capmeter_swm_init();
-  uart0Init(115200);
+  uart0Init(BAUDRATE);
   capmeter_timer_init();
+  acmp_init();
 
-  uint64_t i = 0;
-  while(1) {
-    // TODO: use interrupt or loop for ACMP?
-    // TODO: use interrupt or loop for reporting?
-    capmeter_delay(250);
+  uint32_t last_report_ms = 0;
+  bool     fast           = false; // Enable this to measure big capacitors with 220R resistor
+  uint64_t sum            = 0UL;
+  uint32_t samples        = 0;
 
-    i += 5;
-    capmeter_send_data(i);
+  while(true) {
+    sum += capmeter_charge(fast);
+    samples ++;
+    capmeter_discharge();
+
+    // Handle systime_ms warpping but not too carefully, it is rare
+    if ((systime_ms - last_report_ms > INTERVAL_MS) || (last_report_ms > systime_ms)) {
+      last_report_ms = systime_ms;
+      capmeter_send_data(sum / samples, fast);
+
+      if (samples == 1) {
+        fast = true;
+      }
+      if (samples > SAMPLES_MAX) {
+        fast = false;
+      }
+      sum = 0UL;
+      samples = 0;
+    }
   }
 }
