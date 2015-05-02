@@ -1,0 +1,9 @@
+*~
+*.o
+*.d
+*.map
+*.elf
+*.bin
+*.hex
+*.swp
+*.kate-swp
