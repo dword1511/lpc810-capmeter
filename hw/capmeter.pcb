@@ -786,8 +786,9 @@ Symbol['~' 12.00mil]
 	SymbolLine[20.00mil 35.00mil 25.00mil 30.00mil 8.00mil]
 )
 Attribute("PCB::grid::unit" "mil")
+Attribute("PCB::grid::size" "100.00mil")
 
-Element["" "SIP2" "R5" "220R" 1200.00mil 1100.00mil -50.00mil -150.00mil 0 100 ""]
+Element["" "SIP2" "R5" "220R" 1200.00mil 1000.00mil -50.00mil 50.00mil 0 100 ""]
 (
 	Pin[0.0000 0.0000 60.00mil 30.00mil 66.00mil 28.00mil "1" "1" "square,edge2"]
 	Pin[100.00mil 0.0000 60.00mil 30.00mil 66.00mil 28.00mil "2" "2" "edge2"]
@@ -796,19 +797,6 @@ Element["" "SIP2" "R5" "220R" 1200.00mil 1100.00mil -50.00mil -150.00mil 0 100 "
 	ElementLine [50.00mil -50.00mil 50.00mil 50.00mil 10.00mil]
 	ElementArc [0.0000 0.0000 50.00mil 50.00mil 270 180 20.00mil]
 	ElementArc [100.00mil 0.0000 50.00mil 50.00mil 90 180 20.00mil]
-
-	)
-
-Element["" "ACY400" "R4" "5.6k" 1000.00mil 700.00mil 0.0000 -133.00mil 0 100 ""]
-(
-	Pin[0.0000 0.0000 55.00mil 30.00mil 61.00mil 30.00mil "1" "1" "square"]
-	Pin[0.0000 400.00mil 55.00mil 30.00mil 61.00mil 30.00mil "2" "2" ""]
-	ElementLine [0.0000 0.0000 0.0000 100.00mil 10.00mil]
-	ElementLine [0.0000 300.00mil 0.0000 400.00mil 10.00mil]
-	ElementLine [33.00mil 100.00mil 33.00mil 300.00mil 10.00mil]
-	ElementLine [-33.00mil 300.00mil 33.00mil 300.00mil 10.00mil]
-	ElementLine [-33.00mil 100.00mil -33.00mil 300.00mil 10.00mil]
-	ElementLine [-33.00mil 100.00mil 33.00mil 100.00mil 10.00mil]
 
 	)
 
@@ -852,7 +840,7 @@ Element["" "SIP2" "R2" "220R" 400.00mil 1000.00mil 50.00mil 50.00mil 0 100 ""]
 
 	)
 
-Element["" "SIP2" "R1" "1M" 400.00mil 900.00mil -50.00mil 150.00mil 0 100 ""]
+Element["" "SIP2" "R1" "1M" 400.00mil 900.00mil 50.00mil -150.00mil 0 100 ""]
 (
 	Pin[0.0000 0.0000 60.00mil 30.00mil 66.00mil 28.00mil "1" "1" "square,edge2"]
 	Pin[100.00mil 0.0000 60.00mil 30.00mil 66.00mil 28.00mil "2" "2" "edge2"]
@@ -883,7 +871,7 @@ Element["" "DIP8" "U1" "unknown" 600.00mil 700.00mil -150.00mil -50.00mil 0 100 
 
 	)
 
-Element["" "RCY100P" "C1" "unknown" 1300.00mil 900.00mil 50.00mil -200.00mil 0 100 ""]
+Element["" "RCY100P" "C1" "22u" 1300.00mil 900.00mil 50.00mil -200.00mil 0 100 ""]
 (
 	Pin[0.0000 0.0000 60.00mil 30.00mil 66.00mil 30.00mil "+" "1" "square"]
 	Pin[0.0000 -100.00mil 60.00mil 30.00mil 66.00mil 30.00mil "-" "2" ""]
@@ -894,7 +882,7 @@ Element["" "RCY100P" "C1" "unknown" 1300.00mil 900.00mil 50.00mil -200.00mil 0 1
 
 	)
 
-Element["" "RCY100" "C2" "unknown" 1100.00mil 900.00mil -50.00mil 100.00mil 0 100 ""]
+Element["" "RCY100" "C2" "0.1u" 1100.00mil 900.00mil -50.00mil 50.00mil 0 100 ""]
 (
 	Pin[0.0000 0.0000 60.00mil 30.00mil 66.00mil 30.00mil "1" "1" "square"]
 	Pin[0.0000 -100.00mil 60.00mil 30.00mil 66.00mil 30.00mil "2" "2" ""]
@@ -913,6 +901,19 @@ Element["" "SIP2" "R3" "10k" 1100.00mil 700.00mil 50.00mil -150.00mil 0 100 ""]
 	ElementArc [100.00mil 0.0000 50.00mil 50.00mil 90 180 20.00mil]
 
 	)
+
+Element["" "ACY300" "R4" "5.6k" 1000.00mil 700.00mil -25.00mil -125.00mil 0 100 ""]
+(
+	Pin[0.0000 0.0000 55.00mil 30.00mil 61.00mil 30.00mil "1" "1" "square"]
+	Pin[0.0000 300.00mil 55.00mil 30.00mil 61.00mil 30.00mil "2" "2" ""]
+	ElementLine [0.0000 0.0000 0.0000 75.00mil 10.00mil]
+	ElementLine [0.0000 225.00mil 0.0000 300.00mil 10.00mil]
+	ElementLine [25.00mil 75.00mil 25.00mil 225.00mil 10.00mil]
+	ElementLine [-25.00mil 225.00mil 25.00mil 225.00mil 10.00mil]
+	ElementLine [-25.00mil 75.00mil -25.00mil 225.00mil 10.00mil]
+	ElementLine [-25.00mil 75.00mil 25.00mil 75.00mil 10.00mil]
+
+	)
 Layer(1 "top")
 (
 )
@@ -929,10 +930,9 @@ Layer(2 "bottom")
 	Line[1400.00mil 1200.00mil 1400.00mil 800.00mil 25.00mil 20.00mil "clearline"]
 	Line[900.00mil 800.00mil 1400.00mil 800.00mil 25.00mil 20.00mil "clearline"]
 	Line[900.00mil 700.00mil 1100.00mil 700.00mil 10.00mil 20.00mil "clearline"]
-	Line[1000.00mil 1100.00mil 1200.00mil 1100.00mil 10.00mil 20.00mil "clearline"]
+	Line[1000.00mil 1000.00mil 1200.00mil 1000.00mil 10.00mil 20.00mil "clearline"]
 	Line[800.00mil 900.00mil 1300.00mil 900.00mil 25.00mil 20.00mil "clearline"]
-	Line[1300.00mil 900.00mil 1300.00mil 1100.00mil 25.00mil 20.00mil "clearline"]
-	Line[1300.00mil 1100.00mil 1300.00mil 1100.00mil 25.00mil 20.00mil "clearline"]
+	Line[1300.00mil 900.00mil 1300.00mil 1000.00mil 25.00mil 20.00mil "clearline"]
 	Line[600.00mil 700.00mil 600.00mil 500.00mil 10.00mil 20.00mil "clearline"]
 	Line[600.00mil 800.00mil 700.00mil 800.00mil 10.00mil 20.00mil "clearline"]
 	Line[700.00mil 800.00mil 700.00mil 500.00mil 10.00mil 20.00mil "clearline"]
