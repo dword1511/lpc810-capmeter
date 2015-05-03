@@ -22,5 +22,4 @@ void acmp_init(void);
 void acmp_set_input(uint32_t input_p, uint32_t input_n);
 void acmp_set_hysteresis(uint32_t level);
 
-#endif
-
+#endif /* _ACMP_H_ */

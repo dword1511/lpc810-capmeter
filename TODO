@@ -1,0 +1,9 @@
+* Fix output for C > 9999.99uF
+
+* [Z] Stary capacitance calibration (zeroing)
+
+* [H] Hold / newline function
+
+* [L] Leakage assesment (discharge from 220R, 1M and self discharge.) (220R?! neccessary?)
+
+* Output "-  0.00 pF" when C < 0

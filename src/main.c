@@ -23,41 +23,37 @@
 #define CYCLE_PER_MS (__SYSTEM_CLOCK/1000)
 #define GPIO_FLOAT   (~(3 << 3))
 
-// 200ms / 1M = 200nF
+// 200ms / 1M = 200nF (fast-mode kicks-in for C > 200nF)
 // 200nF * 220R = 44us
-// 200ms / 44us = 4546 measurements (magic! stupid me)
+// 200ms / 44us = 4546 measurements = 1M/220 (magic! stupid me)
 #define RES_FRATIO   (1000000/220 + 1)
 #define SAMPLES_MAX  RES_FRATIO
 
 /*
- * NOTE: every clock is 33ns. Voltage input hooked up to ACMP_I2.
+ * NOTE: every clock is ~33ns. Voltage input hooked up to ACMP_I2.
  * For 1pF resolution, need 1Mohm resistor and 1us resolution.
  * 1us timer with uint32_t warps every 1.2 hours.
- * Systick reg warps every 24ms.
+ * 24-bit systick register warps every 24ms.
  * uint32_t cannot cover 5pF all the way up to 4700uF.
- * may use uint64_t or have a seperate mF instead.
+ * So use uint64_t. (or have a seperate mF instead)
  *
- * Summary:
  * SysTick INT: count ms for delay functions. needs highest priority.
- * ACMP INT:  needs low priority since may depend on delay.
- * Main Loop: record measurement and resets the circuit.
- *            check timestamp and call report every INTERVAL_MS ms.
+ * Main Loop: take and record measurement and resets the circuit.
+ *            check timestamp and report results every INTERVAL_MS ms.
  */
 
 /*
  * NOTE: system performance:
- * 18-20pF minimum (due to distributed capacitance, can be calibrated)
- * <del>~9000uF maximum</del>
- * 5Hz data output
- * Sensitive to resistance
- * Fast channel is off (47 -> 57)?
- * Maybe not, L(1.03uF) = 1.01uF
+ * 18-20pF minimum (due to stray capacitance, can be calibrated. ~12pF on PCB, 7pF on test leads)
+ * 5Hz data output (for C's that are not too large)
+ * Sensitive to resistance (ESR & leakage)
  * 1pf takes 1us. switches to fast mode at 200nF. minimum measurement in fastmode takes 44us.
  */
 
 // TODO: Recv cmd from uart
 // H = hold (just new line)
 // Z = set distributed capacitors
+// L = leakage assesment
 
 volatile static uint32_t systime_ms = 0;
 
@@ -100,24 +96,23 @@ void capmeter_swm_init(void) {
 
 void capmeter_discharge(void) {
   // Setup comparator for monitoring the discharge.
-  // 220R * 4700uF > 1s
-  // You can get another sample while discharging, but currently we do not do this,
+  // Do not just wait, 220R * 4700uF > 1s
+  // You can get another sample while discharging, but currently not doing this,
   // especially where LPC810's sink only provides 4mA before rising to 0.4V...
-  acmp_set_input(ACMPIN_CAP, ACMPIN_GND); // If this does not work, we will have to use the voltage ladder
+  acmp_set_input(ACMPIN_CAP, ACMPIN_GND); // If this does not work, we will have to use the voltage ladder for a small offset
 
-  // All PIN LOW
+  // All PINs LOW
   LPC_GPIO_PORT->DIR0 = (_BV(GPIO_R220) | _BV(GPIO_R1M));
   LPC_GPIO_PORT->CLR0 = (_BV(GPIO_R220) | _BV(GPIO_R1M));
 
   while (ACMP_OUT);
 }
 
-// TODO: faster switch to large capacitors
 uint64_t capmeter_charge(bool fast) {
   uint64_t us_start, us_stop;
   uint32_t last_ms = systime_ms;
 
-  // setup comparator
+  // Setup comparator
   acmp_set_input(ACMPIN_REF, ACMPIN_CAP);
 
   // GPIO High (to be specific, hold low, configure direction, then pull the correct pin high)
@@ -136,7 +131,7 @@ uint64_t capmeter_charge(bool fast) {
   us_stop = capmeter_timer_get_us();
 
   // Calculate diff, convert to pF (*4546UL in fast)
-  // TODO: what will happen when time warps? 0xffffffffffffffffUL 
+  // TODO: what will happen when time warps? 0xffffffffffffffffUL
   if (fast) {
     return (us_stop - us_start) * RES_FRATIO;
   } else {
@@ -145,6 +140,8 @@ uint64_t capmeter_charge(bool fast) {
 }
 
 // TODO: pass calibration, output '-' sign & 0 if <0
+// TODO: output ' E    ...' if > 9999.99uF
+// TODO: add a blinky dot
 void capmeter_send_data(uint64_t pf, bool fast) {
   char msg[13];
   char unit = 'p';
@@ -215,7 +212,7 @@ int main(void) {
   acmp_init();
 
   uint32_t last_report_ms = 0;
-  bool     fast           = false; // Enable this to measure big capacitors with 220R resistor
+  bool     fast           = false; // gets enabled automatically to measure big capacitors with 220R resistor
   uint64_t sum            = 0UL;
   uint32_t samples        = 0;
 
