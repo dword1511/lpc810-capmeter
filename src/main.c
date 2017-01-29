@@ -62,7 +62,7 @@ void SysTick_Handler(void) {
   systime_ms ++;
 }
 
-inline uint32_t capmeter_timer_get_us(void) {
+static inline uint32_t capmeter_timer_get_us(void) {
   return systime_ms * 1000 + 1000 - (SysTick->VAL / CYCLE_PER_US);
 }
 
