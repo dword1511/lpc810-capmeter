@@ -31,7 +31,9 @@ Refs:
 * [Getting Started with the LPC810](https://learn.adafruit.com/getting-started-with-the-lpc810/introduction)
 * [LPC810 CodeBase](https://github.com/microbuilder/LPC810_CodeBase)
 * [lpc21isp](http://sourceforge.net/projects/lpc21isp/)
+* [GNU Tools for ARM Embedded Processors](https://launchpad.net/gcc-arm-embedded) **(Please use this toolchain or code size can get BIG)**
 * [LPCXpresso Sample Code Bundle for the LPC8xx](http://www.lpcware.com/content/nxpfile/lpcxpresso-sample-code-bundle-lpc8xx)
+* [NXP Switch Matrix Tool for LPC81x](http://www.lpcware.com/content/nxpfile/nxp-switch-matrix-tool-lpc800)
 * [A smarter way to write micros()](http://micromouseusa.com/?p=296)
 
 Images:

@@ -7,3 +7,7 @@
 * [L] Leakage assesment (discharge from 220R, 1M and self discharge.) (220R?! neccessary?)
 
 * Output "-  0.00 pF" when C < 0
+
+* Try using internal voltage ladder to eliminate external resistors
+
+* Add margin when switching back to fast mode
