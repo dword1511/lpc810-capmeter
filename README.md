@@ -36,6 +36,10 @@ Refs:
 * [NXP Switch Matrix Tool for LPC81x](http://www.lpcware.com/content/nxpfile/nxp-switch-matrix-tool-lpc800)
 * [A smarter way to write micros()](http://micromouseusa.com/?p=296)
 
+Compiling:
+    cd src && make && make flash
+Use `CROSS=/path/to/toolchain-` and `COMPORT=/dev/ttyACM0` to change toolchain / serial used for flashing.
+
 [OSH Park](https://oshpark.com/shared_projects/58C6wB6e)
 
 Pin Assignment:

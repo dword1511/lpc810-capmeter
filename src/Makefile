@@ -1,6 +1,6 @@
 PROGRAM  = capmeter
-CROSS    = arm-none-eabi-
-COMPORT  = /dev/ttyUSB0
+CROSS   ?= arm-none-eabi-
+COMPORT ?= /dev/ttyUSB0
 OBJS     = main.o \
            acmp.o \
            uart.o \
