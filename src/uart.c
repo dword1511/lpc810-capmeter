@@ -71,7 +71,7 @@ void uart0SendChar(char buffer) {
   LPC_USART0->TXDATA = buffer;
 }
 
-void uart0Send(char *buffer, uint32_t length) {
+void uart0Send(const char *buffer, uint32_t length) {
   while (length != 0) {
     uart0SendChar(*buffer);
     buffer++;

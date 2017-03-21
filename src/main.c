@@ -35,7 +35,7 @@
  * 1us timer with uint32_t warps every 1.2 hours.
  * 24-bit systick register warps every 24ms.
  * uint32_t cannot cover 5pF all the way up to 4700uF.
- * So use uint64_t. (or have a seperate mF instead)
+ * So use uint64_t. (or have a separate mF instead)
  *
  * SysTick INT: count ms for delay functions. needs highest priority.
  * Main Loop: take and record measurement and resets the circuit.
@@ -50,10 +50,10 @@
  * 1pf takes 1us. switches to fast mode at 200nF. minimum measurement in fastmode takes 44us.
  */
 
-// TODO: Recv cmd from uart
+// TODO: Recv cmd from UART
 // H = hold (just new line)
 // Z = set distributed capacitors
-// L = leakage assesment
+// L = leakage assessment
 
 volatile static uint32_t systime_ms = 0;
 
@@ -139,14 +139,21 @@ uint64_t capmeter_charge(bool fast) {
   }
 }
 
+#define MESSAGE_LEN 14
+static const char* msg_2big = " E           \r";
+static bool blink = false;
+
 // TODO: pass calibration, output '-' sign & 0 if <0
-// TODO: output ' E    ...' if > 9999.99uF
-// TODO: add a blinky dot
 void capmeter_send_data(uint64_t pf, bool fast) {
-  char msg[13];
+  char msg[MESSAGE_LEN];
   char unit = 'p';
   uint32_t remainder = 0;
   bool leading = true;
+
+  if (pf > 9999999999UL) {
+    uart0Send(msg_2big, MESSAGE_LEN);
+    return;
+  }
 
   if (pf > 1000000UL) {
     unit = 'u';
@@ -201,8 +208,15 @@ void capmeter_send_data(uint64_t pf, bool fast) {
     msg[11] = ' ';
   }
 
-  msg[12] = '\r';
-  uart0Send(msg, 13);
+  if (blink) {
+    msg[12] = '.';
+  } else {
+    msg[12] = ' ';
+  }
+  blink = !blink;
+
+  msg[13] = '\r';
+  uart0Send(msg, MESSAGE_LEN);
 }
 
 int main(void) {
@@ -221,7 +235,7 @@ int main(void) {
     samples ++;
     capmeter_discharge();
 
-    // Handle systime_ms warpping but not too carefully, it is rare
+    // Handle systime_ms wrapping but not too carefully, it is rare
     if ((systime_ms - last_report_ms > INTERVAL_MS) || (last_report_ms > systime_ms)) {
       last_report_ms = systime_ms;
       capmeter_send_data(sum / samples, fast);

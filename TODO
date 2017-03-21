@@ -1,5 +1,3 @@
-* Fix output for C > 9999.99uF
-
 * [Z] Stray capacitance calibration (zeroing)
 
 * [H] Hold / newline function
