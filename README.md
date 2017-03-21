@@ -36,11 +36,7 @@ Refs:
 * [NXP Switch Matrix Tool for LPC81x](http://www.lpcware.com/content/nxpfile/nxp-switch-matrix-tool-lpc800)
 * [A smarter way to write micros()](http://micromouseusa.com/?p=296)
 
-Images:
-
-![PCB](pcb.png)
-
-![Photo](photo.jpg)
+[OSH Park](https://oshpark.com/shared_projects/58C6wB6e)
 
 Pin Assignment:
 
